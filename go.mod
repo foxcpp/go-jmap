@@ -2,7 +2,7 @@ module github.com/foxcpp/go-jmap
 
 require (
 	github.com/google/go-cmp v0.3.0 // indirect
-	github.com/miekg/dns v1.1.9 // indirect
+	github.com/miekg/dns v1.1.9
 	github.com/pkg/errors v0.8.1 // indirect
 	golang.org/x/crypto v0.0.0-20190513172903-22d7a77e9e5f // indirect
 	golang.org/x/net v0.0.0-20190514140710-3ec191127204 // indirect
