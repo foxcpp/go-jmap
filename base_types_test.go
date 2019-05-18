@@ -23,7 +23,7 @@ func TestIntMarshalJSON(t *testing.T) {
 	assert.Check(t, cmp.ErrorContains(err, ErrOutOfRange.Error()), "json.Marshal")
 
 	b, err := json.Marshal(Int(2 << 50))
-	assert.Check(t, cmp.Nil(err), "json.Marshal")
+	assert.NilError(t, err, "json.Marshal")
 	assert.Check(t, cmp.DeepEqual(b, []byte("2251799813685248")))
 }
 
@@ -31,7 +31,7 @@ func TestIntUnmarshalJSON(t *testing.T) {
 	val := []byte("2251799813685248")
 	var i Int
 	err := json.Unmarshal(val, &i)
-	assert.Check(t, cmp.Nil(err), "json.Unmarshal")
+	assert.NilError(t, err, "json.Unmarshal")
 	assert.Check(t, cmp.Equal(i, Int(2251799813685248)))
 
 	val = []byte("225179981368524800")
@@ -48,7 +48,7 @@ func TestUnsignedIntMarshalJSON(t *testing.T) {
 	assert.Check(t, cmp.ErrorContains(err, ErrOutOfRange.Error()), "json.Marshal")
 
 	b, err := json.Marshal(UnsignedInt(2 << 50))
-	assert.Check(t, cmp.Nil(err), "json.Marshal")
+	assert.NilError(t, err, "json.Marshal")
 	assert.Check(t, cmp.DeepEqual(b, []byte("2251799813685248")))
 }
 
@@ -56,7 +56,7 @@ func TestUnsignedIntUnmarshalJSON(t *testing.T) {
 	val := []byte("2251799813685248")
 	var i UnsignedInt
 	err := json.Unmarshal(val, &i)
-	assert.Check(t, cmp.Nil(err), "json.Unmarshal")
+	assert.NilError(t, err, "json.Unmarshal")
 	assert.Check(t, cmp.Equal(i, UnsignedInt(2251799813685248)))
 
 	val = []byte("225179981368524800")
@@ -68,7 +68,7 @@ func TestUTCDateMarshal(t *testing.T) {
 	// Non-UTC time should be converted to UTC.
 	d := UTCDate(time.Now())
 	b, err := json.Marshal(d)
-	assert.Check(t, cmp.Nil(err), "json.Marshal")
+	assert.NilError(t, err, "json.Marshal")
 	assert.Check(t, bytes.HasSuffix(b, []byte(`Z"`)), b)
 }
 

@@ -13,10 +13,10 @@ import (
 /*
 This file defines fundamental data types used in the JMAP specification.
 
-Since some of the types have specific constraits, Go native types are not used
-directly but instead wrapped into containers that enforce these constraits.
+Since some of the types have specific constraints, Go native types are not used
+directly but instead wrapped into containers that enforce these constraints.
 
-Type constraits checks are enforced during conversion to/from JSON.
+Type constraints checks are enforced during conversion to/from JSON.
 */
 
 var ErrOutOfRange = errors.New("jmap: integer value is not within allowed range")

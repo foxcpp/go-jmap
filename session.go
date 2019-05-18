@@ -1,6 +1,11 @@
 package jmap
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"errors"
+)
+
+const CoreCapabilityName = "urn:ietf:params:jmap:core"
 
 type CollationAlgo string
 
@@ -122,7 +127,7 @@ type Session struct {
 
 	// A map of account id to Account object for each account the user has
 	// access to.
-	Accounts map[ID]Account `json:"account"`
+	Accounts map[ID]Account `json:"accounts"`
 
 	// A map of capability URIs (as found in Capabilities) to the
 	// account id to be considered the user’s main or default account for data
@@ -157,4 +162,25 @@ type Session struct {
 	// (e.g. an account has been added or removed) and so they need to refetch
 	// the object.
 	State string `json:"state"`
+}
+
+var ErrNoCoreCapability = errors.New("jmap: urn:ietf:params:jmap:core capability object is missing")
+
+type session Session
+
+func (s *Session) UnmarshalJSON(data []byte) error {
+	raw := (*session)(s)
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	coreCap, ok := raw.Capabilities[CoreCapabilityName]
+	if !ok {
+		return ErrNoCoreCapability
+	}
+
+	if err := json.Unmarshal(coreCap, &s.CoreCapability); err != nil {
+		return err
+	}
+	return nil
 }
