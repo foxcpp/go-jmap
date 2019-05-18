@@ -13,4 +13,5 @@ linters:
   - scopelint
   - goimports
   - prealloc
+  - misspell
   - unconvert
