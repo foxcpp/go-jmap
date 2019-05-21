@@ -126,7 +126,7 @@ func TestMarshalResponse(t *testing.T) {
 		resp := Response{}
 		resp.SessionState = "state!"
 		resp.Responses = []Invocation{MethodError{
-			Type:        MethodErrUnknownMethod,
+			Type:        CodeUnknownMethod,
 			CallIDValue: "id",
 		}}
 		blob, err := json.Marshal(resp)
@@ -154,7 +154,7 @@ func TestUnmarshalResponse(t *testing.T) {
 		assert.NilError(t, err, "resp.Unmarshal")
 		assert.Check(t, cmp.Equal("state!", resp.SessionState))
 		assert.Check(t, cmp.DeepEqual([]Invocation{MethodError{
-			Type:        MethodErrUnknownMethod,
+			Type:        CodeUnknownMethod,
 			CallIDValue: "id",
 		}}, resp.Responses))
 	})

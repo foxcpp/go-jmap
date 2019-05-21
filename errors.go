@@ -5,15 +5,6 @@ import (
 	"errors"
 )
 
-type ProblemType string
-
-const (
-	ProblemUnknownCapability ProblemType = "urn:ietf:params:jmap:error:unknownCapability"
-	ProblemNotJSON           ProblemType = "urn:ietf:params:jmap:error:notJSON"
-	ProblemNotRequest        ProblemType = "urn:ietf:params:jmap:error:notRequest"
-	ProblemLimit             ProblemType = "urn:ietf:params:jmap:error:limit"
-)
-
 // The RequestError structure is "problem details" object as defined by
 // RFC 7807. Any fields except for Type can be empty.
 //
@@ -23,7 +14,7 @@ const (
 // - urn:ietf:params:jmap:error:notRequest (ProblemNotRequest)
 type RequestError struct {
 	// A URI reference that identifies the problem type.
-	Type ProblemType `json:"type"`
+	Type ErrorCode `json:"type"`
 
 	// A short, human-readable summary of the problem type.
 	Title string `json:"title,omitempty"`
@@ -92,59 +83,11 @@ func (re RequestError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(allProps)
 }
 
-type MethodErrorType string
-
-const (
-	// Some internal server resource was temporarily unavailable. Attempting
-	// the same operation later (perhaps after a backoff with a random factor)
-	// may succeed.
-	MethodErrServUnavailable MethodErrorType = "serverUnavailable"
-
-	// An unexpected or unknown error occurred during the processing of the
-	// call. A description property should provide more details about the
-	// error. The method call made no changes to the server’s state.
-	// Attempting the same operation again is expected to fail again.
-	MethodErrServFail = "serverFail"
-
-	// Some, but not all expected changes described by the method occurred.
-	// The client MUST re-synchronise impacted data to determine server state.
-	// Use of this error is strongly discouraged.
-	MethodErrPartialFail = "serverPartialFail"
-
-	// The server does not recognise this method name.
-	MethodErrUnknownMethod = "unknownMethod"
-
-	// One of the arguments is of the wrong type or otherwise invalid, or a
-	// required argument is missing. A description property MAY be present to
-	// help debug with an explanation of what the problem was.
-	MethodErrInvalidArgs = "invalidArguments"
-
-	// The method used a result reference for one of its arguments, but this
-	// failed to resolve.
-	MethodErrInvalidReference = "invalidResultReference"
-
-	// The method and arguments are valid, but executing the method would
-	// violate an ACL or other permissions policy.
-	MethodErrForbidden = "forbidden"
-
-	// The accountId does not correspond to a valid account.
-	MethodErrAcctNotFound = "accountNotFound"
-
-	// The accountId given corresponds to a valid account, but the account does
-	// not support this method or data type.
-	MethodErrAcctUnsupportedMethod = "accountNotSupportedByMethod"
-
-	// This method call would modify state in an account that is read-only (as
-	// returned on the corresponding Account object in the JMAP Session
-	// resource).
-	MethodErrAcctReadOnly = "accountReadOnly"
-)
-
 // The MethodError structure describes method-level error.
 //
 // See section 3.5.2 of JMAP Core specification.
 type MethodError struct {
-	Type        MethodErrorType `json:"type"`
+	Type        ErrorCode `json:"type"`
 	CallIDValue string
 
 	// All fields other than Type.

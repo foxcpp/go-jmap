@@ -1,0 +1,74 @@
+JMAP Error Code,Intended Use,Change Controller,Description,Reference
+accountNotFound,common,IETF,The accountId does not correspond to a valid account.,"[RFC-ietf-jmap-core-17, Section 3.5.2]"
+accountNotSupportedByMethod,common,IETF,"The accountId given corresponds to a valid account, but the account
+      does not support this method or data type.","[RFC-ietf-jmap-core-17, Section 3.5.2]"
+accountReadOnly,common,IETF,"This method call would modify state in an account that is read-only (as returned
+        on the corresponding Account object in the JMAP Session resource).","[RFC-ietf-jmap-core-17, Section 3.5.2]"
+anchorNotFound,common,IETF,"An anchor argument was supplied, but it cannot be found in the results of the
+      query.","[RFC-ietf-jmap-core-17, Section 5.5]"
+alreadyExists,common,IETF,"The server forbids duplicates and the record already exists in the target 
+        account. An existingId property of type Id MUST be included on the error object with the
+        id of the existing record.","[RFC-ietf-jmap-core-17, Section 5.4]"
+cannotCalculateChanges,common,IETF,"The server cannot calculate the changes from the state string given by the
+      client.","[RFC-ietf-jmap-core-17, Section 5.2 and 5.6]"
+forbidden,common,IETF,The action would violate an ACL or other permissions policy.,"[RFC-ietf-jmap-core-17, Section 3.5.2, 5.3, and 7.2.1]"
+fromAccountNotFound,common,IETF,The fromAccountId does not correspond to a valid account.,"[RFC-ietf-jmap-core-17, Section 5.4 and 6.3]"
+fromAccountNotSupportedByMethod,common,IETF,"The fromAccountId given corresponds to a valid account, but the account does not
+      support this data type.","[RFC-ietf-jmap-core-17, Section 5.4]"
+invalidArguments,common,IETF,"One of the arguments is of the wrong type or otherwise invalid, or a required
+      argument is missing.","[RFC-ietf-jmap-core-17, Section 3.5.2]"
+invalidPatch,common,IETF,The PatchObject given to update the record was not a valid patch.,"[RFC-ietf-jmap-core-17, Section 5.3]"
+invalidProperties,common,IETF,The record given is invalid.,"[RFC-ietf-jmap-core-17, Section 5.3]"
+notFound,common,IETF,The id given cannot be found.,"[RFC-ietf-jmap-core-17, Section 5.3]"
+notJSON,common,IETF,"The content type of the request was not application/json or the request
+      did not parse as I-JSON.","[RFC-ietf-jmap-core-17, Section 3.5.1]"
+notRequest,common,IETF,"The request parsed as JSON but did not match the type signature of the 
+        Request object.","[RFC-ietf-jmap-core-17, Section 3.5.1]"
+overQuota,common,IETF,"The create would exceed a server-defined limit on the number or total
+      size of objects of this type.","[RFC-ietf-jmap-core-17, Section 5.3]"
+rateLimit,common,IETF,"Too many objects of this type have been created recently, and a server-defined
+      rate limit has been reached. It may work if tried again later.","[RFC-ietf-jmap-core-17, Section 5.3]"
+requestTooLarge,common,IETF,"The total number of actions exceeds the maximum number the server is willing to 
+      process in a single method call.","[RFC-ietf-jmap-core-17, Section 5.1 and 5.3]"
+invalidResultReference,common,IETF,"The method used a result reference for one of its arguments, but this failed to 
+      resolve.","[RFC-ietf-jmap-core-17, Section 3.5.2]"
+serverFail,common,IETF,"An unexpected or unknown error occurred during the processing of the call. The
+      method call made no changes to the server's state.","[RFC-ietf-jmap-core-17, Section 3.5.2]"
+serverPartialFail,limited,IETF,"Some, but not all expected changes described by the method occurred. The client
+      MUST re-synchronise impacted data to determine server state. Use of this error is strongly
+      discouraged.","[RFC-ietf-jmap-core-17, Section 3.5.2]"
+serverUnavailable,common,IETF,"Some internal server resource was temporarily unavailable. Attempting the same
+      operation later (perhaps after a backoff with a random factor) may succeed.","[RFC-ietf-jmap-core-17, Section 3.5.2]"
+singleton,common,IETF,"This is a singleton type, so you cannot create another one or destroy the existing
+        one.","[RFC-ietf-jmap-core-17, Section 5.3]"
+stateMismatch,common,IETF,An ifInState argument was supplied and it does not match the current state.,"[RFC-ietf-jmap-core-17, Section 5.3]"
+tooLarge,common,IETF,"The action would result in an object that exceeds a server-defined limit for the
+      maximum size of a single object of this type.","[RFC-ietf-jmap-core-17, Section 5.3]"
+tooManyChanges,common,IETF,There are more changes than the client's maxChanges argument.,"[RFC-ietf-jmap-core-17, Section 5.6]"
+unknownCapability,common,IETF,"The client included a capability in the ""using"" property of the request
+      that the server does not support.","[RFC-ietf-jmap-core-17, Section 3.5.1]"
+unknownMethod,common,IETF,The server does not recognise this method name.,"[RFC-ietf-jmap-core-17, Section 3.5.2]"
+unsupportedFilter,common,IETF,"The filter is syntactically valid, but the server cannot process it.","[RFC-ietf-jmap-core-17, Section 5.5]"
+unsupportedSort,common,IETF,"The sort is syntactically valid, but includes a property the server does not
+      support sorting on, or a collation method it does not recognise.","[RFC-ietf-jmap-core-17, Section 5.5]"
+willDestroy,common,IETF,"The client requested an object be both updated and destroyed in the same /set
+      request, and the server has decided to therefore ignore the update.","[RFC-ietf-jmap-core-17, Section 5.3]"
+mailboxHasChild,common,IETF,"The mailbox still has at least one child mailbox. The client MUST remove these 
+        before it can delete the parent mailbox.","[RFC-ietf-jmap-mail-16, Section 2.5]"
+mailboxHasEmail,common,IETF,"The mailbox has at least one message assigned to it and the onDestroyRemoveMessages
+        argument was false.","[RFC-ietf-jmap-mail-16, Section 2.5]"
+blobNotFound,common,IETF,At least one blob id referenced in the object doesn't exist.,"[RFC-ietf-jmap-mail-16, Section 4.6]"
+tooManyKeywords,common,IETF,The change to the email's keywords would exceed a server-defined maximum.,"[RFC-ietf-jmap-mail-16, Section 4.6]"
+tooManyMailboxes,common,IETF,The change to the email's mailboxes would exceed a server-defined maximum.,"[RFC-ietf-jmap-mail-16, Section 4.6]"
+invalidEmail,common,IETF,The email to be sent is invalid in some way.,"[RFC-ietf-jmap-mail-16, Section 7.5]"
+tooManyRecipients,common,IETF,"The [RFC5321] envelope (supplied or generated) has more
+        recipients than the server allows.","[RFC-ietf-jmap-mail-16, Section 7.5]"
+noRecipients,common,IETF,"The [RFC5321] envelope (supplied or generated) does not
+        have any rcptTo emails.","[RFC-ietf-jmap-mail-16, Section 7.5]"
+invalidRecipients,common,IETF,"The rcptTo property of the [RFC5321] envelope (supplied or
+        generated) contains at least one rcptTo value which is not a valid email for sending to.","[RFC-ietf-jmap-mail-16, Section 7.5]"
+forbiddenMailFrom,common,IETF,"The server does not permit the user to send an email with the
+        [RFC5321] envelope From.","[RFC-ietf-jmap-mail-16, Section 7.5]"
+forbiddenFrom,common,IETF,"The server does not permit the user to send an email with the
+        [RFC5322] From header field of the email to be sent.","[RFC-ietf-jmap-mail-16, Sections 6.3 and 7.5]"
+forbiddenToSend,common,IETF,The user does not have permission to send at all right now.,"[RFC-ietf-jmap-mail-16, Section 7.5]"

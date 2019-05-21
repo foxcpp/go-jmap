@@ -27,7 +27,7 @@ func TestRequestErrorUnmarshal(t *testing.T) {
 	assert.NilError(t, err, "json.Unmarshal")
 
 	assert.Check(t, cmp.Equal(400, errObj.Status))
-	assert.Check(t, cmp.Equal(ProblemUnknownCapability, errObj.Type))
+	assert.Check(t, cmp.Equal(ProblemPrefix+CodeUnknownCapability, errObj.Type))
 
 	t.Run("properties", func(t *testing.T) {
 		errObj := RequestError{}
@@ -35,14 +35,14 @@ func TestRequestErrorUnmarshal(t *testing.T) {
 		assert.NilError(t, err, "json.Unmarshal")
 
 		assert.Check(t, cmp.Equal(400, errObj.Status))
-		assert.Check(t, cmp.Equal(ProblemLimit, errObj.Type))
+		assert.Check(t, cmp.Equal(ProblemPrefix+"limit", errObj.Type))
 		assert.Check(t, cmp.Equal(errObj.Properties["limit"], "maxSizeRequest"))
 	})
 }
 
 func TestRequestErrorMarshal(t *testing.T) {
 	errObj := RequestError{}
-	errObj.Type = ProblemUnknownCapability
+	errObj.Type = ProblemPrefix + CodeUnknownCapability
 	errObj.Status = 400
 	errObj.Detail = "something is broken, yay!"
 
@@ -52,7 +52,7 @@ func TestRequestErrorMarshal(t *testing.T) {
 
 	t.Run("properties", func(t *testing.T) {
 		errObj := RequestError{}
-		errObj.Type = ProblemLimit
+		errObj.Type = ProblemPrefix + "limit"
 		errObj.Status = 400
 		errObj.Detail = "something is broken, yay!"
 		errObj.Properties = map[string]interface{}{
