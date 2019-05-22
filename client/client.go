@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/foxcpp/go-jmap"
@@ -22,8 +24,8 @@ type Client struct {
 	// Value of Authentication header.
 	Authentication string
 
+	// Session endpoint URL. Must be set before any request.
 	SessionEndpoint string
-	BlobEndpoint    string
 
 	// Last seen Session object, set by UpdateSession which is implicitly
 	// called on first API request.
@@ -32,10 +34,18 @@ type Client struct {
 	SessionLck sync.RWMutex
 }
 
+// UpdateSession sets c.Session and returns it.
+//
+// Session object contains information necessary to do almost all requests so
+// UpdateSession is called implicitly on first API request.
 func (c *Client) UpdateSession() (*jmap.Session, error) {
 	client := c.HTTPClient
 	if client == nil {
 		client = http.DefaultClient
+	}
+
+	if c.SessionEndpoint == "" {
+		return nil, fmt.Errorf("jmap/client: SessionEndpoint is empty")
 	}
 
 	req, err := http.NewRequest("GET", c.SessionEndpoint, nil)
@@ -77,7 +87,15 @@ func (c *Client) lazyInitSession() (jmap.Session, error) {
 	return *c.Session, nil
 }
 
+// RawSend sends manually constructed jmap.Request object and returns parsed
+// jmap.Response object.
+//
+// It initializes c.Session if it is empty.
 func (c *Client) RawSend(r *jmap.Request) (*jmap.Response, error) {
+	if c.SessionEndpoint == "" {
+		return nil, fmt.Errorf("jmap/client: SessionEndpoint is empty")
+	}
+
 	session, err := c.lazyInitSession()
 	if err != nil {
 		return nil, err
@@ -132,6 +150,91 @@ func (c *Client) Echo() error {
 		},
 	}})
 	return err
+}
+
+// Upload sends binary data to the server and returns blob ID and some
+// associated meta-data.
+//
+// There are some caveats to keep in mind:
+// - Server may return the same blob ID for multiple uploads of the same blob.
+// - Blob ID may become invalid after some time if it is unused.
+// - Blob ID is usable only by the uploader until it is used, even for shared accounts.
+func (c *Client) Upload(account jmap.ID, blob io.Reader) (*jmap.BlobInfo, error) {
+	if c.SessionEndpoint == "" {
+		return nil, fmt.Errorf("jmap/client: SessionEndpoint is empty")
+	}
+
+	session, err := c.lazyInitSession()
+	if err != nil {
+		return nil, err
+	}
+
+	client := c.HTTPClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+
+	tgtUrl := strings.Replace(session.UploadURL, "{accountId}", string(account), -1)
+	req, err := http.NewRequest("POST", tgtUrl, blob)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authentication", c.Authentication)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode/100 != 2 {
+		return nil, decodeError(resp)
+	}
+
+	var info jmap.BlobInfo
+	return &info, json.NewDecoder(resp.Body).Decode(&info)
+}
+
+func (c *Client) Download(account, blob jmap.ID) (io.ReadCloser, error) {
+	if c.SessionEndpoint == "" {
+		return nil, fmt.Errorf("jmap/client: SessionEndpoint is empty")
+	}
+
+	session, err := c.lazyInitSession()
+	if err != nil {
+		return nil, err
+	}
+
+	client := c.HTTPClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+
+	urlRepl := strings.NewReplacer(
+		"{accountId}", string(account),
+		"{blobId}", string(blob),
+		"{type}", "application/octet-stream", // are any other values necessary?
+		"{name}", "filename",
+	)
+	tgtUrl := urlRepl.Replace(session.DownloadURL)
+	req, err := http.NewRequest("GET", tgtUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authentication", c.Authentication)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode/100 != 2 {
+		defer resp.Body.Close()
+		return nil, decodeError(resp)
+	}
+
+	return resp.Body, nil
 }
 
 func decodeError(resp *http.Response) error {
