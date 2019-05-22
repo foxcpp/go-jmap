@@ -2,6 +2,7 @@ package jmap
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"gotest.tools/assert"
@@ -76,7 +77,7 @@ func TestMarshalRequest(t *testing.T) {
 func TestUnmarshalRequest(t *testing.T) {
 	blob := `{"using":["cap"],"methodCalls":[["NAME",{"arg":"foo"},"id"]]}`
 	req := Request{}
-	err := req.Unmarshal([]byte(blob), map[string]FuncArgsUnmarshal{"NAME": unmarshalTestArgs})
+	err := req.Unmarshal(strings.NewReader(blob), map[string]FuncArgsUnmarshal{"NAME": unmarshalTestArgs})
 	assert.NilError(t, err, "req.Unmarshal")
 	assert.Check(t, cmp.DeepEqual([]string{"cap"}, req.Using))
 	assert.Check(t, cmp.DeepEqual([]Invocation{
@@ -91,7 +92,7 @@ func TestUnmarshalRequest(t *testing.T) {
 	t.Run("unknown method", func(t *testing.T) {
 		blob := `{"using":["cap"],"methodCalls":[["unknown",{"arg":"foo"},"id"]]}`
 		req := Request{}
-		err := req.Unmarshal([]byte(blob), map[string]FuncArgsUnmarshal{"NAME": unmarshalTestArgs})
+		err := req.Unmarshal(strings.NewReader(blob), map[string]FuncArgsUnmarshal{"NAME": unmarshalTestArgs})
 		assert.Check(t, cmp.ErrorContains(err, "jmap: unknown method"))
 	})
 }

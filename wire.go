@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 )
 
 type UnknownMethodError struct {
@@ -74,13 +75,24 @@ func (r Request) MarshalJSON() ([]byte, error) {
 	return json.Marshal(raw)
 }
 
+// RawUnmarshallers creates FuncArgsUnmarshal mapping functions that return json.RawMessage.
+//
+// It allows to disable JSON decoding for Invocation arguments.
+func RawUnmarshallers(methodNames []string) map[string]FuncArgsUnmarshal {
+	res := map[string]FuncArgsUnmarshal{}
+	for _, name := range methodNames {
+		res[name] = func(args json.RawMessage) (interface{}, error) { return args, nil }
+	}
+	return res
+}
+
 // Unmarshal deserializes Request object from JSON, calling functions from
 // invocationCtors to deserialize Invocation objects. Key is method name.
 //
 // If error is returned, Request object is not changed.
-func (r *Request) Unmarshal(data []byte, argsUnmarshallers map[string]FuncArgsUnmarshal) error {
+func (r *Request) Unmarshal(data io.Reader, argsUnmarshallers map[string]FuncArgsUnmarshal) error {
 	raw := rawRequest{}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := json.NewDecoder(data).Decode(&raw); err != nil {
 		return err
 	}
 
@@ -156,9 +168,9 @@ func (r Response) MarshalJSON() ([]byte, error) {
 // Callback for error decoding is added to invocationCtors implicitly.
 //
 // If error is returned, Response object is not changed.
-func (r *Response) Unmarshal(data []byte, argsUnmarshallers map[string]FuncArgsUnmarshal) error {
+func (r *Response) Unmarshal(data io.Reader, argsUnmarshallers map[string]FuncArgsUnmarshal) error {
 	raw := rawResponse{}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := json.NewDecoder(data).Decode(&raw); err != nil {
 		return err
 	}
 

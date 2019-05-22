@@ -16,7 +16,8 @@ import (
 // The Client object wraps *http.Client and stores all information necessary to
 // make JMAP API requests.
 //
-// It is safe to use by multiple goroutines.
+// It is safe to execute requests from multiple goroutines concurrently, but
+// not all Client methods are safe.
 type Client struct {
 	// HTTPClient to use for requests. If nil - http.DefaultClient is used.
 	HTTPClient *http.Client
@@ -32,6 +33,41 @@ type Client struct {
 	Session *jmap.Session
 	// Mutex that is used for access coordination to Session object.
 	SessionLck sync.RWMutex
+
+	argsUnmarshallers map[string]jmap.FuncArgsUnmarshal
+}
+
+func New(sessionURL, authHeader string) (*Client, error) {
+	c := &Client{
+		SessionEndpoint: sessionURL,
+		Authentication:  authHeader,
+	}
+	_, err := c.UpdateSession()
+	return c, err
+}
+
+func NewWithClient(cl *http.Client, sessionURL, authHeader string) (*Client, error) {
+	c := &Client{
+		HTTPClient:      cl,
+		SessionEndpoint: sessionURL,
+		Authentication:  authHeader,
+	}
+	_, err := c.UpdateSession()
+	return c, err
+}
+
+// Enable adds set of decoding callbacks to client. Client will use them to
+// decode arguments in Invocation objects.
+//
+// If you wish to see json.RawMessage in Invocation.Args - use
+// jmap.RawMarshallers.
+//
+// This method must not be called when there is running requests.
+// You probably want to call it before any operations.
+func (c *Client) Enable(unmarshallers map[string]jmap.FuncArgsUnmarshal) {
+	for k, v := range unmarshallers {
+		c.argsUnmarshallers[k] = v
+	}
 }
 
 // UpdateSession sets c.Session and returns it.
@@ -137,7 +173,7 @@ func (c *Client) RawSend(r *jmap.Request) (*jmap.Response, error) {
 	}
 
 	var response jmap.Response
-	return &response, json.NewDecoder(resp.Body).Decode(&response)
+	return &response, response.Unmarshal(resp.Body, c.argsUnmarshallers)
 }
 
 // Echo sends empty Core/echo request, testing server connectivity.
