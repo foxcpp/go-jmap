@@ -3,9 +3,16 @@ package jmap
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
-var ErrUnknownMethod = errors.New("jmap: unknown method name")
+type UnknownMethodError struct {
+	MethodName string
+}
+
+func (ume UnknownMethodError) Error() string {
+	return fmt.Sprintf("jmap: unknown method name: %s", ume.MethodName)
+}
 
 type Invocation struct {
 	Name   string
@@ -81,7 +88,7 @@ func (r *Request) Unmarshal(data []byte, argsUnmarshallers map[string]FuncArgsUn
 	for _, rawCall := range raw.RawCalls {
 		unmarshal, ok := argsUnmarshallers[rawCall.Name]
 		if !ok {
-			return ErrUnknownMethod
+			return UnknownMethodError{MethodName: rawCall.Name}
 		}
 
 		args, err := unmarshal(rawCall.Args)
@@ -162,7 +169,7 @@ func (r *Response) Unmarshal(data []byte, argsUnmarshallers map[string]FuncArgsU
 			var ok bool
 			unmarshal, ok = argsUnmarshallers[rawResp.Name]
 			if !ok {
-				return ErrUnknownMethod
+				return UnknownMethodError{MethodName: rawResp.Name}
 			}
 		} else {
 			unmarshal = UnmarshalMethodErrorArgs

@@ -92,7 +92,7 @@ func TestUnmarshalRequest(t *testing.T) {
 		blob := `{"using":["cap"],"methodCalls":[["unknown",{"arg":"foo"},"id"]]}`
 		req := Request{}
 		err := req.Unmarshal([]byte(blob), map[string]FuncArgsUnmarshal{"NAME": unmarshalTestArgs})
-		assert.Check(t, cmp.ErrorContains(err, ErrUnknownMethod.Error()))
+		assert.Check(t, cmp.ErrorContains(err, "jmap: unknown method"))
 	})
 }
 
