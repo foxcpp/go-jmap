@@ -86,26 +86,18 @@ func (re RequestError) MarshalJSON() ([]byte, error) {
 // The MethodError structure describes method-level error.
 //
 // See section 3.5.2 of JMAP Core specification.
-type MethodError struct {
-	Type        ErrorCode `json:"type"`
-	CallIDValue string
+type MethodErrorArgs struct {
+	Type ErrorCode `json:"type"`
 
 	// All fields other than Type.
 	Properties map[string]interface{}
 }
 
-func (me MethodError) Name() string {
-	return "error"
-}
-func (me MethodError) CallID() string {
-	return me.CallIDValue
-}
-
-func (me MethodError) Error() string {
+func (me MethodErrorArgs) Error() string {
 	return "jmap: " + string(me.Type)
 }
 
-func (me MethodError) MarshalJSON() ([]byte, error) {
+func (me MethodErrorArgs) MarshalJSON() ([]byte, error) {
 	fullProps := make(map[string]interface{}, len(me.Properties)+1)
 	for k, v := range me.Properties {
 		fullProps[k] = v
@@ -115,7 +107,7 @@ func (me MethodError) MarshalJSON() ([]byte, error) {
 	return json.Marshal(fullProps)
 }
 
-func (me *MethodError) UnmarshalJSONArgs(data []byte) error {
+func (me *MethodErrorArgs) UnmarshalJSONArgs(data []byte) error {
 	if err := json.Unmarshal(data, &me); err != nil {
 		return err
 	}
@@ -132,8 +124,8 @@ func (me *MethodError) UnmarshalJSONArgs(data []byte) error {
 	return nil
 }
 
-func UnmarshalMethodError(methodName, callId string, args json.RawMessage) (Invocation, error) {
-	res := MethodError{CallIDValue: callId}
+func UnmarshalMethodErrorArgs(args json.RawMessage) (interface{}, error) {
+	res := MethodErrorArgs{}
 	err := res.UnmarshalJSONArgs(args)
 	return res, err
 }

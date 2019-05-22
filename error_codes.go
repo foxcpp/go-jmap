@@ -1,4 +1,5 @@
 package jmap
+
 // Code generated using jmap-errors DO NOT EDIT.
 
 // ProblemPrefix is added to corresponding error code when it is reported
@@ -169,5 +170,4 @@ const (
 
 	// The user does not have permission to send at all right now.
 	CodeForbiddenToSend ErrorCode = "forbiddenToSend"
-
 )

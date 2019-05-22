@@ -7,14 +7,10 @@ import (
 
 var ErrUnknownMethod = errors.New("jmap: unknown method name")
 
-// Invocation interface describes common subset of operations that are valid on
-// any method call response.
-//
-// json.Marshal on the Invocation should produce a JSON object containing only
-// Invocation arguments.
-type Invocation interface {
-	Name() string
-	CallID() string
+type Invocation struct {
+	Name   string
+	CallID string
+	Args   interface{}
 }
 
 type Request struct {
@@ -38,11 +34,17 @@ type Request struct {
 // the same time.
 type request Request
 
+type rawInvocation struct {
+	Name   string
+	CallID string
+	Args   json.RawMessage
+}
+
 // The rawRequest is an intermediate result of request JSON deserialization.
 type rawRequest struct {
 	request
 
-	RawCalls []json.RawMessage `json:"methodCalls"`
+	RawCalls []rawInvocation `json:"methodCalls"`
 }
 
 func (r Request) MarshalJSON() ([]byte, error) {
@@ -50,18 +52,17 @@ func (r Request) MarshalJSON() ([]byte, error) {
 	raw.Using = r.Using
 	raw.Calls = r.Calls
 	raw.CreatedIDs = r.CreatedIDs
-	raw.RawCalls = make([]json.RawMessage, 0, len(r.Calls))
+	raw.RawCalls = make([]rawInvocation, 0, len(r.Calls))
 	for _, call := range r.Calls {
-		argsBlob, err := json.Marshal(call)
+		argsBlob, err := json.Marshal(call.Args)
 		if err != nil {
 			return nil, err
 		}
-		callBlob, err := MarshalInvocation(call.Name(), call.CallID(), argsBlob)
-		if err != nil {
-			return nil, err
-		}
-
-		raw.RawCalls = append(raw.RawCalls, json.RawMessage(callBlob))
+		raw.RawCalls = append(raw.RawCalls, rawInvocation{
+			Name:   call.Name,
+			CallID: call.CallID,
+			Args:   argsBlob,
+		})
 	}
 	return json.Marshal(raw)
 }
@@ -70,7 +71,7 @@ func (r Request) MarshalJSON() ([]byte, error) {
 // invocationCtors to deserialize Invocation objects. Key is method name.
 //
 // If error is returned, Request object is not changed.
-func (r *Request) Unmarshal(data []byte, invocationCtors map[string]FuncInvocationUnmarshal) error {
+func (r *Request) Unmarshal(data []byte, argsUnmarshallers map[string]FuncArgsUnmarshal) error {
 	raw := rawRequest{}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
@@ -78,22 +79,21 @@ func (r *Request) Unmarshal(data []byte, invocationCtors map[string]FuncInvocati
 
 	raw.Calls = make([]Invocation, 0, len(raw.RawCalls))
 	for _, rawCall := range raw.RawCalls {
-		method, callId, args, err := UnmarshalInvocation(rawCall)
-		if err != nil {
-			return err
-		}
-
-		ctor, ok := invocationCtors[method]
+		unmarshal, ok := argsUnmarshallers[rawCall.Name]
 		if !ok {
 			return ErrUnknownMethod
 		}
 
-		invocation, err := ctor(method, callId, args)
+		args, err := unmarshal(rawCall.Args)
 		if err != nil {
 			return err
 		}
 
-		raw.Calls = append(raw.Calls, invocation)
+		raw.Calls = append(raw.Calls, Invocation{
+			Name:   rawCall.Name,
+			CallID: rawCall.CallID,
+			Args:   args,
+		})
 	}
 
 	// We will not change r if something goes wrong.
@@ -124,23 +124,22 @@ type response Response
 
 type rawResponse struct {
 	response
-	RawResponses []json.RawMessage `json:"methodResponses"`
+	RawResponses []rawInvocation `json:"methodResponses"`
 }
 
 func (r Response) MarshalJSON() ([]byte, error) {
 	raw := rawResponse{response: response(r)}
-	raw.RawResponses = make([]json.RawMessage, 0, len(r.Responses))
+	raw.RawResponses = make([]rawInvocation, 0, len(r.Responses))
 	for _, response := range r.Responses {
-		argsBlob, err := json.Marshal(response)
+		argsBlob, err := json.Marshal(response.Args)
 		if err != nil {
 			return nil, err
 		}
-		respBlob, err := MarshalInvocation(response.Name(), response.CallID(), argsBlob)
-		if err != nil {
-			return nil, err
-		}
-
-		raw.RawResponses = append(raw.RawResponses, json.RawMessage(respBlob))
+		raw.RawResponses = append(raw.RawResponses, rawInvocation{
+			Name:   response.Name,
+			CallID: response.CallID,
+			Args:   argsBlob,
+		})
 	}
 	return json.Marshal(raw)
 }
@@ -150,7 +149,7 @@ func (r Response) MarshalJSON() ([]byte, error) {
 // Callback for error decoding is added to invocationCtors implicitly.
 //
 // If error is returned, Response object is not changed.
-func (r *Response) Unmarshal(data []byte, invocationCtors map[string]FuncInvocationUnmarshal) error {
+func (r *Response) Unmarshal(data []byte, argsUnmarshallers map[string]FuncArgsUnmarshal) error {
 	raw := rawResponse{}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
@@ -158,30 +157,27 @@ func (r *Response) Unmarshal(data []byte, invocationCtors map[string]FuncInvocat
 
 	raw.Responses = make([]Invocation, 0, len(raw.RawResponses))
 	for _, rawResp := range raw.RawResponses {
-		method, callId, args, err := UnmarshalInvocation(rawResp)
-		if err != nil {
-			return err
-		}
-
-		var ctor FuncInvocationUnmarshal
-		if method == "error" {
-			// We don't change invocationCtors argument because it could affect
-			// users code.
-			ctor = UnmarshalMethodError
-		} else {
+		var unmarshal FuncArgsUnmarshal
+		if rawResp.Name != "error" {
 			var ok bool
-			ctor, ok = invocationCtors[method]
+			unmarshal, ok = argsUnmarshallers[rawResp.Name]
 			if !ok {
 				return ErrUnknownMethod
 			}
+		} else {
+			unmarshal = UnmarshalMethodErrorArgs
 		}
 
-		invocation, err := ctor(method, callId, args)
+		args, err := unmarshal(rawResp.Args)
 		if err != nil {
 			return err
 		}
 
-		raw.Responses = append(raw.Responses, invocation)
+		raw.Responses = append(raw.Responses, Invocation{
+			Name:   rawResp.Name,
+			CallID: rawResp.CallID,
+			Args:   args,
+		})
 	}
 
 	// We will not change r if something goes wrong.
@@ -192,51 +188,43 @@ func (r *Response) Unmarshal(data []byte, invocationCtors map[string]FuncInvocat
 	return nil
 }
 
-// UnmarshalInvocation a helper function that unpacks Invocation triplet (name,
-// args, callId) into strings for name and callId, returning arguments as raw JSON that can just
-// then unmarshalled into actual response structure.
-//
-// UnmarshalInvocation is a low-level protocol function exported for the use of
-// protocols built on JMAP Core and extensions. You probably don't want to use
-// it directly.
-func UnmarshalInvocation(data []byte) (methodName, callId string, args json.RawMessage, err error) {
+func (i *rawInvocation) UnmarshalJSON(data []byte) error {
+	var methodName, callId string
+	var args json.RawMessage
+
 	// Slice so we can detect invalid size.
 	triplet := make([]json.RawMessage, 0, 3)
 	if err := json.Unmarshal(data, &triplet); err != nil {
-		return "", "", nil, err
+		return err
 	}
 	if len(triplet) != 3 {
-		return "", "", nil, errors.New("jmap: malformed Invocation object, need exactly 3 elements")
+		return errors.New("jmap: malformed Invocation object, need exactly 3 elements")
 	}
 
 	if err := json.Unmarshal(triplet[0], &methodName); err != nil {
-		return "", "", nil, err
+		return err
 	}
 	if err := json.Unmarshal(triplet[2], &callId); err != nil {
-		return "", "", nil, err
+		return err
 	}
 	args = triplet[1]
 
 	if args[0] != '{' {
-		return "", "", nil, errors.New("jmap: malformed Invocation object, arguments must be object")
+		return errors.New("jmap: malformed Invocation object, arguments must be object")
 	}
 
-	return
+	i.Name = methodName
+	i.CallID = callId
+	i.Args = args
+
+	return nil
 }
 
-// MarshalInvocation a helper function that packs Invocation triplet (name,
-// args, callId) into JSON representation.
-//
-// args must be non-null JSON object, as required by schema.
-//
-// MarshalInvocation is a low-level protocol function exported for the use of
-// protocols built on JMAP Core and extensions. You probably don't want to use
-// it directly.
-func MarshalInvocation(methodName, callId string, args json.RawMessage) ([]byte, error) {
-	if args[0] != '{' {
+func (i rawInvocation) MarshalJSON() ([]byte, error) {
+	if i.Args[0] != '{' {
 		return nil, errors.New("jmap: malformed Invocation object, arguments must be object")
 	}
-	return json.Marshal([3]interface{}{methodName, args, callId})
+	return json.Marshal([3]interface{}{i.Name, i.Args, i.CallID})
 }
 
-type FuncInvocationUnmarshal func(methodName, callId string, args json.RawMessage) (Invocation, error)
+type FuncArgsUnmarshal func(args json.RawMessage) (interface{}, error)
