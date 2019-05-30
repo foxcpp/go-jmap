@@ -19,7 +19,7 @@ import (
 // It is safe to execute requests from multiple goroutines concurrently, but
 // not all Client methods are safe.
 type Client struct {
-	// HTTPClient to use for requests. If nil - http.DefaultClient is used.
+	// HTTPClient to use for requests. Set to http.DefaultClient by New.
 	HTTPClient *http.Client
 
 	// Value of Authentication header.
@@ -37,15 +37,17 @@ type Client struct {
 	argsUnmarshallers map[string]jmap.FuncArgsUnmarshal
 }
 
+// New creates new JMAP Core client using http.DefaultClient for all requests.
+//
+// It fetches Session object right after initialzation.
 func New(sessionURL, authHeader string) (*Client, error) {
-	c := &Client{
-		SessionEndpoint: sessionURL,
-		Authentication:  authHeader,
-	}
-	_, err := c.UpdateSession()
-	return c, err
+	return NewWithClient(http.DefaultClient, sessionURL, authHeader)
 }
 
+// New creates new JMAP Core client using user-provided HTTP client for all
+// requests.
+//
+// It fetches Session object right after initialzation.
 func NewWithClient(cl *http.Client, sessionURL, authHeader string) (*Client, error) {
 	c := &Client{
 		HTTPClient:      cl,
@@ -75,11 +77,6 @@ func (c *Client) Enable(unmarshallers map[string]jmap.FuncArgsUnmarshal) {
 // Session object contains information necessary to do almost all requests so
 // UpdateSession is called implicitly on first API request.
 func (c *Client) UpdateSession() (*jmap.Session, error) {
-	client := c.HTTPClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
 	if c.SessionEndpoint == "" {
 		return nil, fmt.Errorf("jmap/client: SessionEndpoint is empty")
 	}
@@ -90,7 +87,7 @@ func (c *Client) UpdateSession() (*jmap.Session, error) {
 	}
 	req.Header.Set("Authentication", c.Authentication)
 
-	resp, err := client.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -146,11 +143,6 @@ func (c *Client) RawSend(r *jmap.Request) (*jmap.Response, error) {
 		}
 	}
 
-	client := c.HTTPClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
 	reqBlob, err := json.Marshal(r)
 	if err != nil {
 		return nil, err
@@ -162,7 +154,7 @@ func (c *Client) RawSend(r *jmap.Request) (*jmap.Response, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authentication", c.Authentication)
 
-	resp, err := client.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -232,6 +224,7 @@ func (c *Client) Upload(account jmap.ID, blob io.Reader) (*jmap.BlobInfo, error)
 	return &info, json.NewDecoder(resp.Body).Decode(&info)
 }
 
+// Download downloads binary data by its Blob ID from the server.
 func (c *Client) Download(account, blob jmap.ID) (io.ReadCloser, error) {
 	if c.SessionEndpoint == "" {
 		return nil, fmt.Errorf("jmap/client: SessionEndpoint is empty")
@@ -242,15 +235,10 @@ func (c *Client) Download(account, blob jmap.ID) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	client := c.HTTPClient
-	if client == nil {
-		client = http.DefaultClient
-	}
-
 	urlRepl := strings.NewReplacer(
 		"{accountId}", string(account),
 		"{blobId}", string(blob),
-		"{type}", "application/octet-stream", // are any other values necessary?
+		"{type}", "application/octet-stream", // TODO: are any other values necessary?
 		"{name}", "filename",
 	)
 	tgtUrl := urlRepl.Replace(session.DownloadURL)
@@ -261,7 +249,7 @@ func (c *Client) Download(account, blob jmap.ID) (io.ReadCloser, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authentication", c.Authentication)
 
-	resp, err := client.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
