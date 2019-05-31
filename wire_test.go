@@ -153,7 +153,7 @@ func TestMarshalResponse(t *testing.T) {
 func TestUnmarshalResponse(t *testing.T) {
 	blob := `{"sessionState":"state!","methodResponses":[["NAME",{"arg":"foo"},"id"]]}`
 	resp := Response{}
-	err := resp.Unmarshal([]byte(blob), map[string]FuncArgsUnmarshal{"NAME": unmarshalTestArgs})
+	err := resp.Unmarshal(strings.NewReader(blob), map[string]FuncArgsUnmarshal{"NAME": unmarshalTestArgs})
 	assert.NilError(t, err, "resp.Unmarshal")
 	assert.Check(t, cmp.Equal("state!", resp.SessionState))
 	assert.Check(t, cmp.DeepEqual([]Invocation{
@@ -168,7 +168,7 @@ func TestUnmarshalResponse(t *testing.T) {
 	t.Run("with error", func(t *testing.T) {
 		blob := `{"sessionState":"state!","methodResponses":[["error",{"type":"unknownMethod"},"id"]]}`
 		resp := Response{}
-		err := resp.Unmarshal([]byte(blob), map[string]FuncArgsUnmarshal{"NAME": unmarshalTestArgs})
+		err := resp.Unmarshal(strings.NewReader(blob), map[string]FuncArgsUnmarshal{"NAME": unmarshalTestArgs})
 		assert.NilError(t, err, "resp.Unmarshal")
 		assert.Check(t, cmp.Equal("state!", resp.SessionState))
 		assert.Check(t, cmp.DeepEqual([]Invocation{
