@@ -3,8 +3,7 @@ dist: xenial
 language: go
 
 go:
-- "1.11.4"
-- "1.x"
+- "1.13"
 
 env:
 - GO111MODULE=on
