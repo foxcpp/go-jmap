@@ -22,8 +22,8 @@ type Client struct {
 	// HTTPClient to use for requests. Set to http.DefaultClient by New.
 	HTTPClient *http.Client
 
-	// Value of Authentication header.
-	Authentication string
+	// Value of Authorization header.
+	Authorization string
 
 	// Session endpoint URL. Must be set before any request.
 	SessionEndpoint string
@@ -52,7 +52,7 @@ func NewWithClient(cl *http.Client, sessionURL, authHeader string) (*Client, err
 	c := &Client{
 		HTTPClient:      cl,
 		SessionEndpoint: sessionURL,
-		Authentication:  authHeader,
+		Authorization:  authHeader,
 	}
 	_, err := c.UpdateSession()
 	return c, err
@@ -85,7 +85,7 @@ func (c *Client) UpdateSession() (*jmap.Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authentication", c.Authentication)
+	req.Header.Set("Authorization", c.Authorization)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -152,7 +152,7 @@ func (c *Client) RawSend(r *jmap.Request) (*jmap.Response, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authentication", c.Authentication)
+	req.Header.Set("Authorization", c.Authorization)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -208,7 +208,7 @@ func (c *Client) Upload(account jmap.ID, blob io.Reader) (*jmap.BlobInfo, error)
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authentication", c.Authentication)
+	req.Header.Set("Authorization", c.Authorization)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -247,7 +247,7 @@ func (c *Client) Download(account, blob jmap.ID) (io.ReadCloser, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authentication", c.Authentication)
+	req.Header.Set("Authorization", c.Authorization)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
