@@ -50,9 +50,10 @@ func New(sessionURL, authHeader string) (*Client, error) {
 // It fetches Session object right after initialzation.
 func NewWithClient(cl *http.Client, sessionURL, authHeader string) (*Client, error) {
 	c := &Client{
-		HTTPClient:      cl,
-		SessionEndpoint: sessionURL,
-		Authorization:  authHeader,
+		HTTPClient:        cl,
+		SessionEndpoint:   sessionURL,
+		Authorization:     authHeader,
+		argsUnmarshallers: make(map[string]jmap.FuncArgsUnmarshal),
 	}
 	_, err := c.UpdateSession()
 	return c, err
@@ -62,7 +63,7 @@ func NewWithClient(cl *http.Client, sessionURL, authHeader string) (*Client, err
 // decode arguments in Invocation objects.
 //
 // If you wish to see json.RawMessage in Invocation.Args - use
-// jmap.RawMarshallers.
+// jmap.RawUnMarshallers.
 //
 // This method must not be called when there is running requests.
 // You probably want to call it before any operations.
@@ -170,13 +171,16 @@ func (c *Client) RawSend(r *jmap.Request) (*jmap.Response, error) {
 
 // Echo sends empty Core/echo request, testing server connectivity.
 func (c *Client) Echo() error {
-	_, err := c.RawSend(&jmap.Request{Calls: []jmap.Invocation{
-		{
-			Name:   "Core/echo",
-			CallID: "echo0",
-			Args:   map[string]interface{}{},
-		},
-	}})
+	c.Enable(jmap.RawUnmarshallers([]string{"Core/echo"}))
+	_, err := c.RawSend(&jmap.Request{
+		Using: []string{jmap.CoreCapabilityName},
+		Calls: []jmap.Invocation{
+			{
+				Name:   "Core/echo",
+				CallID: "echo0",
+				Args:   map[string]interface{}{},
+			},
+		}})
 	return err
 }
 
